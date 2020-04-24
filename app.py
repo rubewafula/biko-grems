@@ -5,16 +5,14 @@ from logging.handlers import RotatingFileHandler
 import logging
 import traceback
 
-from grems_api import (PlaceBetTransaction, DailyBalanceList, AccountBalance, 
-    BetOutcomeUpdate, PlaceBetTransactionResponse, AccountBalanceResponse, BetOutcomeUpdateResponse)
+from grems_api import (PlaceBetTransaction, AccountBalance, BetOutcomeUpdate, 
+    PlaceBetTransactionResponse, AccountBalanceResponse, BetOutcomeUpdateResponse)
 
 app = Flask(__name__)
 api = Api(app)
 
 api.add_resource(PlaceBetTransaction,'/api/v1/place-bet-transaction')
 api.add_resource(PlaceBetTransactionResponse,'/api/v1/place-bet-transaction/response')
-
-api.add_resource(DailyBalanceList,'/api/v1/daily-balanceList')
 
 api.add_resource(AccountBalance,'/api/v1/account-balance')
 api.add_resource(AccountBalanceResponse,'/api/v1/account-balance/response')
