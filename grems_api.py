@@ -10,7 +10,7 @@ from flask import current_app as app
 
 global_headers = {
     'Content-Type':'Application/xml',
-    'Rcems-Code':'',
+    'Rcems-Code':'OPRT003',
     'Rcems-Operation':''
 }
 
@@ -24,7 +24,7 @@ class PlaceBetTransaction(Resource):
 
         #print(args)
 
-        raw_xml="""<rcems><rcemsMsg><OprtDtl><OprtCode>{operator_code}</OprtCode><ResultUrl>{call_back_url}</ResultUrl></OprtDtl><TrxInfo><OprtTrxId>{transaction_id}</OprtTrxId><MnoTrxId>{mno_ref}</MnoTrxId><MnoName>{mno}</MnoName><BetAmt>{bet_amount}</BetAmt><BetDesc>{bet_desc}</BetDesc><ExpWonAmt>{possible_win}</ExpWonAmt><Ccy>TZS</Ccy><TrxDtTm>{created}</TrxDtTm><PlyrCellNum>{msisdn}</PlyrCellNum><TktNum>{bet_id}</TktNum><Odds>{total_odd}</Odds><ExpBonus>{bonus_amount}</ExpBonus><GameId>{game_id}</GameId><ShopId>{shop_id}</ShopId><Jackpot>{is_jackpot}</Jackpot><OfficeType>{bet_type}</OfficeType><Status>{status}</Status><Rsvd1></Rsvd1> <Rsvd2></Rsvd2><Rsvd3></Rsvd3><Rsvd4></Rsvd4><Rsvd5></Rsvd5></TrxInfo><rcemsMsg><rcemsSgn></rcemsSgn></rcems>"""
+        raw_xml="""<rcems><rcemsMsg><OprtDtl><OprtCode>{operator_code}</OprtCode><ResultUrl>{call_back_url}</ResultUrl></OprtDtl><TrxInfo><OprtTrxId>{transaction_id}</OprtTrxId><MnoTrxId>{mno_ref}</MnoTrxId><MnoName>{mno}</MnoName><BetAmt>{bet_amount}</BetAmt><BetDesc>{bet_desc}</BetDesc><ExpWonAmt>{possible_win}</ExpWonAmt><Ccy>TZS</Ccy><TrxDtTm>{created}</TrxDtTm><PlyrCellNum>{msisdn}</PlyrCellNum><TktNum>{bet_id}</TktNum><Odds>{total_odd}</Odds><ExpBonus>{bonus_amount}</ExpBonus><GameId>{game_id}</GameId><ShopId>{shop_id}</ShopId><Jackpot>{is_jackpot}</Jackpot><OfficeType>{bet_type}</OfficeType><Status>{status}</Status><Rsvd1></Rsvd1> <Rsvd2></Rsvd2><Rsvd3></Rsvd3><Rsvd4></Rsvd4><Rsvd5></Rsvd5></TrxInfo></rcemsMsg><rcemsSgn>672jsdgwer672wt621ghdwqjy2178712te1267638qwwhjsahu6782whkasdbchwetd72eyfshbaute217yiehsafy812urok12pdi012ejdjhy27r62810230-124782hkjkso102839127</rcemsSgn></rcems>"""
         xml=raw_xml.format(
             transaction_id = args.get('transaction_id'),
             mno_ref=args.get('mno_ref'),
@@ -43,10 +43,10 @@ class PlaceBetTransaction(Resource):
             bet_type=args.get('office_type', 'Online'),
             status=args.get('status', 'BET'),
             call_back_url='',
-            operator_code=''
+            operator_code=args.get('operator_code', 'OPRT003')
         )
-        #print(xml)
-
+        print(xml)
+        global_headers['Rcems-Operation'] = 'sbtrxn'
         response= requests.post('http://196.192.79.29/api/transactions/qrequest', data=xml, headers=global_headers).text
         #print(xml)
         response_code = re.search('<TrxStsCode\>(.*)<\/TrxStsCode>', response, re.IGNORECASE).group(1)
@@ -67,7 +67,7 @@ class BetOutcomeUpdate(Resource):
     def post(self):
         args=request.get_json()
 
-        raw_xml = """<rcems><rcemsMsg><OprtDtl><OprtCode>{operator_code}</OprtCode><ResultUrl>{call_back_url}</ResultUrl></OprtDtl><TrxInfo><OprtTrxId>{transaction_id}</OprtTrxId><OrgnTktNum>{bet_id}</OrgnTktNum> <WonAmt>{possible_win}</WonAmt><Bonus>{bonus_amount}</Bonus><TrxDtTm>{created}</TrxDtTm><Status>{status}</Status><Rsvd1></Rsvd1><Rsvd2></Rsvd2><Rsvd3></Rsvd3><Rsvd4></Rsvd4><Rsvd5></Rsvd5></TrxInfo><rcemsMsg><rcemsSgn></rcemsSgn></rcems>"""
+        raw_xml = """<rcems><rcemsMsg><OprtDtl><OprtCode>{operator_code}</OprtCode><ResultUrl>{call_back_url}</ResultUrl></OprtDtl><TrxInfo><OprtTrxId>{transaction_id}</OprtTrxId><OrgnTktNum>{bet_id}</OrgnTktNum><WonAmt>{possible_win}</WonAmt><Bonus>{bonus_amount}</Bonus><TrxDtTm>{created}</TrxDtTm><Status>{status}</Status><Rsvd1></Rsvd1><Rsvd2></Rsvd2><Rsvd3></Rsvd3><Rsvd4></Rsvd4><Rsvd5></Rsvd5></TrxInfo></rcemsMsg><rcemsSgn>thsihbqwaoewuwekly674298bsdf2t82bneh827324l36j2h56u3952basdq9392612382461741rb2hre51643129128421t3712531263721</rcemsSgn></rcems>"""
 
         xml = raw_xml.format(
                 transaction_id=args.get('transaction_id'),
@@ -81,6 +81,7 @@ class BetOutcomeUpdate(Resource):
         )
 
         print(xml)
+        global_headers['Rcems-Operation'] = 'sbutrxn'
         response= requests.post('http://196.192.79.29/api/transactions/qrequest', data=xml, headers=global_headers).text
         response_code = re.search('<TrxStsCode\>(.*)<\/TrxStsCode>', response, re.IGNORECASE).group(1)
         
@@ -100,7 +101,7 @@ class AccountBalance(Resource):
 
     def post(self):
         args=request.get_json()
-        raw_xml = """<rcems><rcemsMsg><OprtDtl><OprtCode>{operator_code}</OprtCode><ResultUrl>{call_back_url}</ResultUrl></OprtDtl><TrxInfo><OprtTrxId>{profile_id}</OprtTrxId><PlyrId>{msisdn}</PlyrId><BlncAmt>{balance}</BlncAmt><Ccy>TZS</Ccy><TrxDtTm>{created}</TrxDtTm><Rsvd1></Rsvd1<Rsvd2></Rsvd2><Rsvd3></Rsvd3><Rsvd4></Rsvd4><Rsvd5></Rsvd5></TrxInfo><rcemsMsg><rcemsSgn></rcemsSgn></rcems>"""
+        raw_xml = """<rcems><rcemsMsg><OprtDtl><OprtCode>{operator_code}</OprtCode><ResultUrl>{call_back_url}</ResultUrl></OprtDtl><TrxInfo><OprtTrxId>{profile_id}</OprtTrxId><PlyrId>{msisdn}</PlyrId><BlncAmt>{balance}</BlncAmt><Ccy>TZS</Ccy><TrxDtTm>{created}</TrxDtTm><Rsvd1></Rsvd1<Rsvd2></Rsvd2><Rsvd3></Rsvd3><Rsvd4></Rsvd4><Rsvd5></Rsvd5></TrxInfo></rcemsMsg><rcemsSgn>hsjdksbwt32764323hsgatdq76e23gd762egydg727r823grbjnj27r238r926128cnc2e7b1nr92r328b68527cypqxq6rqbxn</rcemsSgn></rcems>"""
 
         xml = raw_xml.format(
             profile_id=args.get('profile_id'),
@@ -112,6 +113,7 @@ class AccountBalance(Resource):
         )
 
         print(xml)
+        global_headers['Rcems-Operation'] = 'pabtrxn'
         response= requests.post('http://196.192.79.29/api/transactions/qrequest', data=xml, headers=global_headers).text
         response_code = re.search('<TrxStsCode\>(.*)<\/TrxStsCode>', response, re.IGNORECASE).group(1)
 
