@@ -60,7 +60,7 @@ if __name__ == '__main__':
     logger = logging.getLogger(__name__)
     logger.setLevel(logging.DEBUG)
     logger.addHandler(handler)
-    app.run(host="127.0.0.1",port=8000, debug=True)
+    app.run(host="0.0.0.0",port=9095, debug=True)
 
 
 
