@@ -1,9 +1,9 @@
-from amqplib import client_0_8 as amqp
+#from amqplib import client_0_8 as amqp
 from flask import current_app as app
 import configparser
 import os
 import json
-
+import pika
 
 class Publisher(object):
 
@@ -34,11 +34,14 @@ class Publisher(object):
     def publish_message(self, message, msg_type='BET'):
         app.logger.info("FOUND MESSAGE Bonus posting to Q: [%s] Message %r " % (msg_type,message))
         try:
-            conn = amqp.Connection(host=self.configs['rabbithost'],
-                userid=self.configs['rabbitusername'],
-                password=self.configs['rabbitpassword'],
-                virtual_host=self.configs['rabbitvhost'] or "/",
-                insist=False)
+            credentials = pika.PlainCredentials(self.configs['rabbitusername'], self.configs['rabbitpassword'])
+            parameters = pika.ConnectionParameters(self.configs['rabbithost'],
+                                       5672,
+                                       self.configs['rabbitvhost'] or "/",
+                                       credentials)
+
+            conn =  pika.BlockingConnection(parameters)
+
         except Exception as e:
             app.logger.error("Error attempting to get Rabbit Connection: %r " % e)
             return;
@@ -52,9 +55,18 @@ class Publisher(object):
             msg = amqp.Message(json.dumps(message))
             msg.properties["content_type"] = "text/plain"
             msg.properties["delivery_mode"] = 2
-            ch.basic_publish(exchange=exchange,
-                             routing_key=routing_key,
-                             msg=msg)
+            headers = {"content-type":"text/plain"}
+            ch.basic_publish(
+		        exchange=exchange,
+		        routing_key=routing_key,
+		        body=json.dumps(message), # must be string
+		        properties=pika.BasicProperties(
+			        delivery_mode=2, # makes persistent job
+			        priority=0, # default priority
+			        headers=headers
+		        )
+            )
+
             app.logger.info("Message published OK ... ")
         except Exception as e:
             app.logger.error("Error attempting to publish to Rabbit: Bonus %r " % e)
