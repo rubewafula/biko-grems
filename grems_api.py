@@ -66,7 +66,7 @@ class PlaceBetTransaction(Resource):
             is_jackpot=args.get('is_jackpot'),
             bet_type=args.get('office_type', 'Online'),
             status=args.get('status', 'BET'),
-            call_back_url='',
+            call_back_url=conf.get('bet_transaction_response_url'),
             operator_code=args.get('operator_code', 'OPRT003'),
             enc_sign=conf.get('encryption_key')
         )
@@ -104,7 +104,7 @@ class BetOutcomeUpdate(Resource):
                 created=args.get('created'),
                 status=args.get('status'),
                 operator_code=args.get('operator_code'),
-                call_back_url='',
+                call_back_url=conf.get('bet_update_response_url'),
                 enc_sign=conf.get('encryption_key')
         )
 
@@ -140,7 +140,7 @@ class AccountBalance(Resource):
             balance=args.get('balance'),
             created=args.get('created'),
             operator_code=args.get('operator_code'),
-            call_back_url='',
+            call_back_url=conf.get('account_balance_response_url'),
             enc_sign=conf.get('encryption_key')
         )
 

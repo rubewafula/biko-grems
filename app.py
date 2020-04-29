@@ -22,6 +22,22 @@ api.add_resource(BetOutcomeUpdateResponse,'/api/v1/bet-outcome-update/response')
 
 filename = '/var/log/grems/grems.api.log'
 
+app.logger.setLevel(logging.DEBUG)
+log_formatter = logging.Formatter(
+    "%(asctime)s %(levelname)-8s %(name)-5s %(filename)s:%(lineno)d:%(funcName)-10s %(message)s", 
+    datefmt="%m-%d-%y %H:%M:%S")
+
+handler = logging.handlers.SysLogHandler(address = '/dev/log')
+handler.setFormatter(log_formatter)
+app.logger.addHandler(handler)
+
+
+handler2 = logging.handlers.RotatingFileHandler(filename,
+    maxBytes=50*1024*1024, backupCount=5)
+handler2.setFormatter(log_formatter)
+app.logger.addHandler(handler2)
+
+
 @app.after_request
 def after_request(response):
     """ Logging after every request. """
@@ -53,13 +69,6 @@ def exceptions(e):
     return "Internal Server Error", 500
 
 if __name__ == '__main__':
-    # maxBytes to small number, in order to demonstrate the generation of multiple log files (backupCount).
-    handler = RotatingFileHandler(filename, maxBytes=10000, backupCount=3)
-    # getLogger(__name__):   decorators loggers to file + werkzeug loggers to stdout
-    # getLogger('werkzeug'): decorators loggers to file + nothing to stdout
-    logger = logging.getLogger(__name__)
-    logger.setLevel(logging.DEBUG)
-    logger.addHandler(handler)
     app.run(host="0.0.0.0",port=9095, debug=True)
 
 
