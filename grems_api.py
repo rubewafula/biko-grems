@@ -208,7 +208,7 @@ class BetOutcomeUpdateResponse(Resource):
         publisher = Publisher(conf)
         publisher.publish_message(message, 'BETUPDATE')        
         
-        app.logger.info("PlaceBetTransactionResponse Transaction code [%s], status code [%s]" % (
+        app.logger.info("BetOutcomeUpdateResponse Transaction code [%s], status code [%s]" % (
             transaction_id, status_code)
         )
 
