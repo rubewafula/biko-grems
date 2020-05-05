@@ -2,3 +2,5 @@
 *.pyc
 v
 v/*
+certs
+certs/*
