@@ -10,11 +10,19 @@ import os
 
 from flask import current_app as app
 
+#for the certificates
+from cryptography.hazmat import backends
+from cryptography.hazmat.primitives import hashes, serialization
+from cryptography.hazmat.primitives.asymmetric import padding
+from cryptography.hazmat.primitives.serialization import pkcs12
+from endesive import xades, signer
+
 global_headers = {
     'Content-Type':'Application/xml',
     'Rcems-Code':'OPRT003',
     'Rcems-Operation':''
 }
+
 
 class Config(object):
     @staticmethod
@@ -37,6 +45,27 @@ class Config(object):
             return config_dic
         except Exception as e:
             return {} 
+
+class P12Cert(object):
+    def __init__():
+        pass        
+
+    def parse():
+         conf = Config.read('CERT')
+         with open(conf.get('biko_grems_cert_path'), 'rb') as fp:
+             self.p12 = pkcs12.load_key_and_certificates(fp.read(), conf.get('biko_grems_password'), backends.default_backend())
+
+
+    def sign(tosign, algosig='sha1WithRSAEncryption'):
+        self.parse_cert()
+        key = self.p12.get_privatekey().to_cryptography_key()
+        signed_value_signature = key.sign(
+            tosign,
+            padding.PKCS1v15(),
+            getattr(hashes, algosig.upper())()
+        )
+        return signed_value_signature
+
 
 
 class PlaceBetTransaction(Resource):
