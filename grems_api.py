@@ -7,15 +7,18 @@ import json
 import requests
 import re
 import os
-
+import base64
 from flask import current_app as app
 
 #for the certificates
-from cryptography.hazmat import backends
-from cryptography.hazmat.primitives import hashes, serialization
+#from cryptography.hazmat import backends
+from cryptography.hazmat.primitives import hashes
+#, serialization
 from cryptography.hazmat.primitives.asymmetric import padding
-from cryptography.hazmat.primitives.serialization import pkcs12
-from endesive import xades, signer
+#from cryptography.hazmat.primitives.serialization import pkcs12
+#from endesive import xades, signer
+
+from OpenSSL import crypto
 
 global_headers = {
     'Content-Type':'Application/xml',
@@ -46,25 +49,22 @@ class Config(object):
         except Exception as e:
             return {} 
 
-class P12Cert(object):
-    def __init__():
+class P12Cert:
+    def __init__(self):
         pass        
-
-    def parse():
+    
+    @staticmethod
+    def load():
          conf = Config.read('CERT')
-         with open(conf.get('biko_grems_cert_path'), 'rb') as fp:
-             self.p12 = pkcs12.load_key_and_certificates(fp.read(), conf.get('biko_grems_password'), backends.default_backend())
+         print(conf)
+         with open(conf.get('biko_grems_cert_path'), 'rb') as pfx:
+             return crypto.load_pkcs12(pfx.read(), conf.get('biko_grems_password'))
 
-
+    @staticmethod
     def sign(tosign, algosig='sha1WithRSAEncryption'):
-        self.parse_cert()
-        key = self.p12.get_privatekey().to_cryptography_key()
-        signed_value_signature = key.sign(
-            tosign,
-            padding.PKCS1v15(),
-            getattr(hashes, algosig.upper())()
-        )
-        return signed_value_signature
+        p12 = P12Cert.load()
+        private_key = p12.get_privatekey()
+        return base64.b64encode(crypto.sign(private_key, tosign, algosig)).decode("utf-8") 
 
 
 
@@ -77,8 +77,8 @@ class PlaceBetTransaction(Resource):
 
         conf = Config.read('BIKO')
 
-        raw_xml="""<rcems><rcemsMsg><OprtDtl><OprtCode>{operator_code}</OprtCode><ResultUrl>{call_back_url}</ResultUrl></OprtDtl><TrxInfo><OprtTrxId>{transaction_id}</OprtTrxId><MnoTrxId>{mno_ref}</MnoTrxId><MnoName>{mno}</MnoName><BetAmt>{bet_amount}</BetAmt><BetDesc>{bet_desc}</BetDesc><ExpWonAmt>{possible_win}</ExpWonAmt><Ccy>TZS</Ccy><TrxDtTm>{created}</TrxDtTm><PlyrCellNum>{msisdn}</PlyrCellNum><TktNum>{bet_id}</TktNum><Odds>{total_odd}</Odds><ExpBonus>{bonus_amount}</ExpBonus><GameId>{game_id}</GameId><ShopId>{shop_id}</ShopId><Jackpot>{is_jackpot}</Jackpot><OfficeType>{bet_type}</OfficeType><Status>{status}</Status><Rsvd1></Rsvd1> <Rsvd2></Rsvd2><Rsvd3></Rsvd3><Rsvd4></Rsvd4><Rsvd5></Rsvd5></TrxInfo></rcemsMsg><rcemsSgn>{enc_sign}</rcemsSgn></rcems>"""
-        xml=raw_xml.format(
+        message_text ="""<rcemsMsg><OprtDtl><OprtCode>{operator_code}</OprtCode><ResultUrl>{call_back_url}</ResultUrl></OprtDtl><TrxInfo><OprtTrxId>{transaction_id}</OprtTrxId><MnoTrxId>{mno_ref}</MnoTrxId><MnoName>{mno}</MnoName><BetAmt>{bet_amount}</BetAmt><BetDesc>{bet_desc}</BetDesc><ExpWonAmt>{possible_win}</ExpWonAmt><Ccy>TZS</Ccy><TrxDtTm>{created}</TrxDtTm><PlyrCellNum>{msisdn}</PlyrCellNum><TktNum>{bet_id}</TktNum><Odds>{total_odd}</Odds><ExpBonus>{bonus_amount}</ExpBonus><GameId>{game_id}</GameId><ShopId>{shop_id}</ShopId><Jackpot>{is_jackpot}</Jackpot><OfficeType>{bet_type}</OfficeType><Status>{status}</Status><Rsvd1></Rsvd1><Rsvd2></Rsvd2><Rsvd3></Rsvd3><Rsvd4></Rsvd4><Rsvd5></Rsvd5></TrxInfo></rcemsMsg>"""
+        message_xml = message_text.format(
             transaction_id = args.get('transaction_id'),
             mno_ref=args.get('mno_ref'),
             mno=args.get('mno'),
@@ -97,12 +97,19 @@ class PlaceBetTransaction(Resource):
             status=args.get('status', 'BET'),
             call_back_url=conf.get('bet_transaction_response_url'),
             operator_code=args.get('operator_code', 'OPRT003'),
-            enc_sign=conf.get('encryption_key')
         )
-        #print(xml)
+
+        raw_xml="""<rcems>{message_text}<rcemsSgn>{enc_sign}</rcemsSgn></rcems>"""
+
+        xml=raw_xml.format(
+            message_text=message_xml,
+            enc_sign=P12Cert.sign(message_xml)
+        )
+        print(xml)
         global_headers['Rcems-Operation'] = 'sbtrxn'
         response= requests.post('http://196.192.79.29/api/transactions/qrequest', data=xml, headers=global_headers).text
-        #print(xml)
+        print(response)
+
         response_code = re.search('<TrxStsCode\>(.*)<\/TrxStsCode>', response, re.IGNORECASE).group(1)
         app.logger.info("PlaceBetTransaction Created [%s], MSISDN [%s] "\
                 "BetID [%s], Bet Amount [%s], Bonus Amount [%s] | RESPONSE [%s] "\
@@ -122,19 +129,23 @@ class BetOutcomeUpdate(Resource):
         args=request.get_json()
         
         conf = Config.read('BIKO')
+        message_text ="""<rcemsMsg><OprtDtl><OprtCode>{operator_code}</OprtCode><ResultUrl>{call_back_url}</ResultUrl></OprtDtl><TrxInfo><OprtTrxId>{transaction_id}</OprtTrxId><OrgnTktNum>{bet_id}</OrgnTktNum><WonAmt>{possible_win}</WonAmt><Bonus>{bonus_amount}</Bonus><TrxDtTm>{created}</TrxDtTm><Status>{status}</Status><Rsvd1></Rsvd1><Rsvd2></Rsvd2><Rsvd3></Rsvd3><Rsvd4></Rsvd4><Rsvd5></Rsvd5></TrxInfo></rcemsMsg>""" 
+        message_xml = message_text.format(
+            transaction_id=args.get('transaction_id'),
+            bet_id=args.get('bet_id'),
+            possible_win=args.get('possible_win'),
+            bonus_amount=args.get('bonus_amount'),
+            created=args.get('created'),
+            status=args.get('status'),
+            operator_code=args.get('operator_code'),
+            call_back_url=conf.get('bet_update_response_url')
 
-        raw_xml = """<rcems><rcemsMsg><OprtDtl><OprtCode>{operator_code}</OprtCode><ResultUrl>{call_back_url}</ResultUrl></OprtDtl><TrxInfo><OprtTrxId>{transaction_id}</OprtTrxId><OrgnTktNum>{bet_id}</OrgnTktNum><WonAmt>{possible_win}</WonAmt><Bonus>{bonus_amount}</Bonus><TrxDtTm>{created}</TrxDtTm><Status>{status}</Status><Rsvd1></Rsvd1><Rsvd2></Rsvd2><Rsvd3></Rsvd3><Rsvd4></Rsvd4><Rsvd5></Rsvd5></TrxInfo></rcemsMsg><rcemsSgn>{enc_sign}</rcemsSgn></rcems>"""
+        )
+        raw_xml = """<rcems>{message_text}<rcemsSgn>{enc_sign}</rcemsSgn></rcems>"""
 
         xml = raw_xml.format(
-                transaction_id=args.get('transaction_id'),
-                bet_id=args.get('bet_id'),
-                possible_win=args.get('possible_win'),
-                bonus_amount=args.get('bonus_amount'),
-                created=args.get('created'),
-                status=args.get('status'),
-                operator_code=args.get('operator_code'),
-                call_back_url=conf.get('bet_update_response_url'),
-                enc_sign=conf.get('encryption_key')
+                message_text = message_xml,
+                enc_sign=P12Cert.sign(message_xml)
         )
 
         #print(xml)
@@ -160,17 +171,21 @@ class AccountBalance(Resource):
         args=request.get_json()
         
         conf = Config.read('BIKO')
+        message_text = """<rcemsMsg><OprtDtl><OprtCode>{operator_code}</OprtCode><ResultUrl>{call_back_url}</ResultUrl></OprtDtl><TrxInfo><OprtTrxId>{profile_id}</OprtTrxId><PlyrId>{msisdn}</PlyrId><BlncAmt>{balance}</BlncAmt><Ccy>TZS</Ccy><TrxDtTm>{created}</TrxDtTm><Rsvd1></Rsvd1><Rsvd2></Rsvd2><Rsvd3></Rsvd3><Rsvd4></Rsvd4><Rsvd5></Rsvd5></TrxInfo></rcemsMsg>"""
 
-        raw_xml = """<rcems><rcemsMsg><OprtDtl><OprtCode>{operator_code}</OprtCode><ResultUrl>{call_back_url}</ResultUrl></OprtDtl><TrxInfo><OprtTrxId>{profile_id}</OprtTrxId><PlyrId>{msisdn}</PlyrId><BlncAmt>{balance}</BlncAmt><Ccy>TZS</Ccy><TrxDtTm>{created}</TrxDtTm><Rsvd1></Rsvd1><Rsvd2></Rsvd2><Rsvd3></Rsvd3><Rsvd4></Rsvd4><Rsvd5></Rsvd5></TrxInfo></rcemsMsg><rcemsSgn>{enc_sign}</rcemsSgn></rcems>"""
-
-        xml = raw_xml.format(
+        message_xml = message_text.format(
             profile_id=args.get('profile_id'),
             msisdn=args.get('msisdn'),
             balance=args.get('balance'),
             created=args.get('created'),
             operator_code=args.get('operator_code'),
             call_back_url=conf.get('account_balance_response_url'),
-            enc_sign=conf.get('encryption_key')
+        )
+        raw_xml = """<rcems>{message_text}<rcemsSgn>{enc_sign}</rcemsSgn></rcems>"""
+
+        xml = raw_xml.format(
+            message_text = message_xml,
+            enc_sign=P12Cert.sign(message_xml)
         )
 
         #print(xml)
