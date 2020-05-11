@@ -1,5 +1,5 @@
 #!/bin/bash
-from flask import request,jsonify
+from flask import request,jsonify, Response
 from flask_restful import reqparse, abort, Resource
 from publisher import Publisher
 import configparser
@@ -105,10 +105,10 @@ class PlaceBetTransaction(Resource):
             message_text=message_xml,
             enc_sign=P12Cert.sign(message_xml)
         )
-        print(xml)
+        #print(xml)
         global_headers['Rcems-Operation'] = 'sbtrxn'
         response= requests.post('http://196.192.79.29/api/transactions/qrequest', data=xml, headers=global_headers).text
-        print(response)
+        #print(response)
 
         response_code = re.search('<TrxStsCode\>(.*)<\/TrxStsCode>', response, re.IGNORECASE).group(1)
         app.logger.info("PlaceBetTransaction Created [%s], MSISDN [%s] "\
@@ -230,7 +230,10 @@ class PlaceBetTransactionResponse(Resource):
             transaction_id, status_code)
         )
 
-        return "<rcemsTrxSubReqAck>TrxStsCode>GBT0000</TrxStsCode></rcemsTrxSubReqAck>"
+        return Response(
+                    """<?xml version="1.0" encoding="UTF-16"?><rcemsTrxSubReqAck><TrxStsCode>GBT0000</TrxStsCode></rcemsTrxSubReqAck>""",
+                    content_type='text/xml; charset=utf-8'
+               )
 
 
 class BetOutcomeUpdateResponse(Resource):
@@ -256,7 +259,10 @@ class BetOutcomeUpdateResponse(Resource):
             transaction_id, status_code)
         )
 
-        return "<rcemsTrxSubReqAck>TrxStsCode>GBT0000</TrxStsCode></rcemsTrxSubReqAck>"
+        return Response(
+                    """<?xml version="1.0" encoding="UTF-16"?><rcemsTrxSubReqAck><TrxStsCode>GBT0000</TrxStsCode></rcemsTrxSubReqAck>""",
+                    content_type='text/xml; charset=utf-8'
+               )
 
 
 class AccountBalanceResponse(Resource):
@@ -283,6 +289,9 @@ class AccountBalanceResponse(Resource):
             transaction_id, status_code)
         )
 
-        return "<rcemsTrxSubReqAck>TrxStsCode>GBT0000</TrxStsCode></rcemsTrxSubReqAck>"
+        return Response(
+                    """<?xml version="1.0" encoding="UTF-16"?><rcemsTrxSubReqAck><TrxStsCode>GBT0000</TrxStsCode></rcemsTrxSubReqAck>""",
+                    content_type='text/xml; charset=utf-8'
+                )
 
 
