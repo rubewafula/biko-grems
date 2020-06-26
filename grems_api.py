@@ -107,7 +107,8 @@ class PlaceBetTransaction(Resource):
         )
         #print(xml)
         global_headers['Rcems-Operation'] = 'sbtrxn'
-        response= requests.post('http://196.192.79.29/api/transactions/qrequest', data=xml, headers=global_headers).text
+        #response= requests.post('http://196.192.79.29/api/transactions/qrequest', data=xml, headers=global_headers).text
+        response= requests.post('http://196.192.79.42:8006/api/transactions/qrequest', data=xml, headers=global_headers).text
         #print(response)
 
         response_code = re.search('<TrxStsCode\>(.*)<\/TrxStsCode>', response, re.IGNORECASE).group(1)
@@ -150,7 +151,8 @@ class BetOutcomeUpdate(Resource):
 
         #print(xml)
         global_headers['Rcems-Operation'] = 'sbutrxn'
-        response= requests.post('http://196.192.79.29/api/transactions/qrequest', data=xml, headers=global_headers).text
+        #response= requests.post('http://196.192.79.29/api/transactions/qrequest', data=xml, headers=global_headers).text
+        response= requests.post('http://196.192.79.42:8006/api/transactions/qrequest', data=xml, headers=global_headers).text
         response_code = re.search('<TrxStsCode\>(.*)<\/TrxStsCode>', response, re.IGNORECASE).group(1)
         
         app.logger.info("BetOutcomeUpdate Created [%s], "\
@@ -192,7 +194,8 @@ class AccountBalance(Resource):
         global_headers['Rcems-Operation'] = 'pabtrxn'
         #print(global_headers)
 
-        response= requests.post('http://196.192.79.29/api/transactions/qrequest', data=xml, headers=global_headers).text
+        #response= requests.post('http://196.192.79.29/api/transactions/qrequest', data=xml, headers=global_headers).text
+        response= requests.post('http://196.192.79.42:8006/api/transactions/qrequest', data=xml, headers=global_headers).text
         response_code = re.search('<TrxStsCode\>(.*)<\/TrxStsCode>', response, re.IGNORECASE).group(1)
 
         app.logger.info("AccountBalance  Created [%s], "\

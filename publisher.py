@@ -1,4 +1,3 @@
-#from amqplib import client_0_8 as amqp
 from flask import current_app as app
 import configparser
 import os
@@ -46,15 +45,12 @@ class Publisher(object):
             app.logger.error("Error attempting to get Rabbit Connection: %r " % e)
             return;
 
-        app.logger.info("Connection to rabbit established to Q... [%s]" % queue)
+        app.logger.info("Connection established, preparing to publish message TYPE [%s],MESSAGE [%s]" % (msg_type, message))
         queue = self.get_queue_name(msg_type)
         exchange = self.get_exchange(queue)
         routing_key = self.get_routing_key(queue)
         try:
             ch = conn.channel()
-            msg = amqp.Message(json.dumps(message))
-            msg.properties["content_type"] = "text/plain"
-            msg.properties["delivery_mode"] = 2
             headers = {"content-type":"text/plain"}
             ch.basic_publish(
 		        exchange=exchange,
@@ -67,7 +63,7 @@ class Publisher(object):
 		        )
             )
 
-            app.logger.info("Message published OK ... ")
+            app.logger.info("Message published OK ... to EXC [%s]" % exchange)
         except Exception as e:
             app.logger.error("Error attempting to publish to Rabbit: Bonus %r " % e)
             conn.close()
